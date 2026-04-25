@@ -1,0 +1,28 @@
+# ── Service ───────────────────────────────────────────────────────────────────
+# Exposes the DevOpsHub pods as a stable internal endpoint.
+# Type: ClusterIP — traffic enters only through the Ingress controller.
+apiVersion: v1
+kind: Service
+metadata:
+  name: devopshub-svc
+  namespace: devopshub
+  labels:
+    app.kubernetes.io/name: devopshub
+    app.kubernetes.io/component: service
+  annotations:
+    # Expose /metrics to Prometheus scraper on port 3000
+    prometheus.io/scrape: "true"
+    prometheus.io/port: "3000"
+    prometheus.io/path: "/metrics"
+spec:
+  type: ClusterIP
+  selector:
+    # Must match the pod labels in deployment.yaml
+    app: devopshub
+  ports:
+    - name: http
+      protocol: TCP
+      # Port the Service listens on inside the cluster
+      port: 80
+      # Port the container is listening on (matches containerPort in deploy)
+      targetPort: 3000

@@ -1,0 +1,54 @@
+# ── Ingress ───────────────────────────────────────────────────────────────────
+# Routes external HTTP/HTTPS traffic to the DevOpsHub Service.
+# Requires the NGINX Ingress Controller to be installed in the cluster:
+#   kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/...
+#
+# For local testing add to /etc/hosts:
+#   127.0.0.1  devopshub.local
+# For cloud clusters, replace devopshub.local with your real domain and
+# configure a DNS A record pointing to the Ingress controller's external IP.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: devopshub-ingress
+  namespace: devopshub
+  labels:
+    app.kubernetes.io/name: devopshub
+    app.kubernetes.io/component: ingress
+  annotations:
+    # Use the NGINX ingress class
+    kubernetes.io/ingress.class: "nginx"
+    # Redirect all HTTP to HTTPS
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Proxy timeouts (seconds) — generous for AI API calls
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "60"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "60"
+    # Max request body size (nutritional info POST payload)
+    nginx.ingress.kubernetes.io/proxy-body-size: "1m"
+    # Enable CORS for frontend SPA
+    nginx.ingress.kubernetes.io/enable-cors: "true"
+    # Rate limiting — 20 requests/second per IP to prevent abuse
+    nginx.ingress.kubernetes.io/limit-rps: "20"
+spec:
+  tls:
+    - hosts:
+        - devopshub.local
+      # Secret containing the TLS certificate and key.
+      # Generate a self-signed cert for local dev:
+      #   openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+      #     -keyout tls.key -out tls.crt -subj "/CN=devopshub.local"
+      #   kubectl create secret tls devopshub-tls \
+      #     --cert=tls.crt --key=tls.key -n devopshub
+      secretName: devopshub-tls
+  rules:
+    - host: devopshub.local
+      http:
+        paths:
+          # Route all traffic to the DevOpsHub Service
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: devopshub-svc
+                port:
+                  number: 80

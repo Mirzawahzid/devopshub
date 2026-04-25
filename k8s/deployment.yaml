@@ -1,0 +1,158 @@
+# ── Deployment ────────────────────────────────────────────────────────────────
+# Manages the DevOpsHub Node.js application pods.
+# Scaled to 2 replicas for high availability.
+# Uses both a liveness probe (restart if deadlocked) and a readiness probe
+# (remove from load-balancer rotation until env vars are available).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devopshub-app
+  namespace: devopshub
+  labels:
+    app.kubernetes.io/name: devopshub
+    app.kubernetes.io/component: web
+    app.kubernetes.io/version: "1.0.0"
+spec:
+  # ── Scaling: 2 replicas for HA across nodes ──────────────────────────────
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: devopshub
+
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      # Keep at least 1 pod available during updates (zero-downtime)
+      maxUnavailable: 1
+      # Allow 1 extra pod during the rollout
+      maxSurge: 1
+
+  template:
+    metadata:
+      labels:
+        app: devopshub
+        app.kubernetes.io/name: devopshub
+        app.kubernetes.io/component: web
+    spec:
+      # Prevent both replicas landing on the same node
+      affinity:
+        podAntiAffinity:
+          preferredDuringSchedulingIgnoredDuringExecution:
+            - weight: 100
+              podAffinityTerm:
+                labelSelector:
+                  matchLabels:
+                    app: devopshub
+                topologyKey: kubernetes.io/hostname
+
+      containers:
+        - name: devopshub-app
+          # Replace with your actual image after pushing to a registry:
+          # e.g. ghcr.io/<owner>/devopshub-app:latest
+          image: devopshub-app:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+
+          # ── Environment: non-sensitive values from ConfigMap ─────────────
+          envFrom:
+            - configMapRef:
+                name: devopshub-config
+
+          # ── Environment: sensitive values from Secret ────────────────────
+          env:
+            - name: RAPIDAPI_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devopshub-secrets
+                  key: RAPIDAPI_KEY
+            - name: OMDB_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devopshub-secrets
+                  key: OMDB_API_KEY
+            - name: SESSION_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: devopshub-secrets
+                  key: SESSION_SECRET
+
+          # ── Liveness Probe ───────────────────────────────────────────────
+          # Purpose:  Detects a deadlocked or crashed process.
+          # Action:   Kubernetes RESTARTS the container if this fails.
+          # Endpoint: GET /healthz — lightweight; returns {status:"alive"}.
+          # Design:   No external I/O — just checks the process is responsive.
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 3000
+            # Wait 15 s after container start before first check (startup time)
+            initialDelaySeconds: 15
+            # Check every 20 s
+            periodSeconds: 20
+            # Must respond within 5 s
+            timeoutSeconds: 5
+            # Restart after 3 consecutive failures
+            failureThreshold: 3
+            # 1 consecutive success to consider alive (liveness only allows 1)
+            successThreshold: 1
+
+          # ── Readiness Probe ──────────────────────────────────────────────
+          # Purpose:  Detects when a pod is not yet ready for traffic.
+          # Action:   Kubernetes REMOVES the pod from Service endpoints if
+          #           this fails (no restarts — it just stops routing to it).
+          # Endpoint: GET /readyz — verifies all required env vars are set.
+          # Design:   More thorough than liveness; safe to check config state.
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 3000
+            # Start checking sooner than liveness (5 s is enough to read env)
+            initialDelaySeconds: 5
+            # Check every 10 s — quicker recovery from transient failures
+            periodSeconds: 10
+            # Must respond within 3 s
+            timeoutSeconds: 3
+            # Remove from rotation after 2 consecutive failures
+            failureThreshold: 2
+            # 2 consecutive successes to re-enter rotation (avoids flapping)
+            successThreshold: 2
+
+          # ── Resource Limits ──────────────────────────────────────────────
+          resources:
+            requests:
+              # Guaranteed minimums — scheduler uses these to place the pod
+              cpu: "100m"
+              memory: "128Mi"
+            limits:
+              # Hard ceiling — prevents a runaway pod from starving neighbours
+              cpu: "500m"
+              memory: "256Mi"
+
+          # ── Security Context ─────────────────────────────────────────────
+          securityContext:
+            # Run as non-root user (UID 1000) — follows principle of least priv
+            runAsNonRoot: true
+            runAsUser: 1000
+            # Prevent privilege escalation attacks
+            allowPrivilegeEscalation: false
+            # Read-only root filesystem (app writes go to /tmp if needed)
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # ── Writable tmp volume (required for read-only root FS) ─────────
+          volumeMounts:
+            - name: tmp-dir
+              mountPath: /tmp
+
+      volumes:
+        - name: tmp-dir
+          emptyDir: {}
+
+      # Graceful shutdown: give the app 30 s to finish in-flight requests
+      terminationGracePeriodSeconds: 30

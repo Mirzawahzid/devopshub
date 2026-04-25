@@ -1,0 +1,223 @@
+/* ── Reset & base ── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  background: #f0f4f8;
+  color: #1a202c;
+  min-height: 100vh;
+  padding: 2rem 1rem;
+}
+
+.container {
+  max-width: 820px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+header h1 {
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: #2d6a4f;
+}
+
+.subtitle {
+  color: #4a5568;
+  margin-top: 0.4rem;
+  font-size: 1rem;
+}
+
+/* ── Input section ── */
+.input-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-bottom: 1.5rem;
+}
+
+.input-section label {
+  display: block;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #2d3748;
+}
+
+textarea {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  border: 1.5px solid #cbd5e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  resize: vertical;
+  transition: border-color 0.2s;
+  font-family: inherit;
+  color: #2d3748;
+  background: #f7fafc;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: #2d6a4f;
+  background: #fff;
+}
+
+button {
+  margin-top: 1rem;
+  width: 100%;
+  padding: 0.85rem;
+  background: #2d6a4f;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  transition: background 0.2s, opacity 0.2s;
+}
+
+button:hover:not(:disabled) { background: #1b4332; }
+button:disabled { opacity: 0.65; cursor: not-allowed; }
+
+/* ── Spinner ── */
+.spinner {
+  width: 18px; height: 18px;
+  border: 3px solid rgba(255,255,255,0.4);
+  border-top-color: #fff;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.hidden { display: none !important; }
+
+/* ── Error box ── */
+.error-box {
+  background: #fff5f5;
+  border: 1.5px solid #fc8181;
+  color: #c53030;
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.95rem;
+}
+
+/* ── Results section ── */
+.results-section {
+  background: #fff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.results-section h2 {
+  font-size: 1.3rem;
+  color: #2d6a4f;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+/* ── Summary cards (calories, protein, carbs, fat) ── */
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.card {
+  background: #f0faf4;
+  border: 1.5px solid #b7e4c7;
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.card .card-value {
+  font-size: 1.7rem;
+  font-weight: 700;
+  color: #2d6a4f;
+}
+
+.card .card-unit {
+  font-size: 0.8rem;
+  color: #4a5568;
+}
+
+.card .card-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #2d3748;
+  margin-top: 0.2rem;
+}
+
+/* ── Detailed nutrient table ── */
+.detailed-results table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.detailed-results th {
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  background: #f7fafc;
+  color: #4a5568;
+  font-weight: 600;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.detailed-results td {
+  padding: 0.55rem 0.8rem;
+  border-bottom: 1px solid #edf2f7;
+  color: #2d3748;
+}
+
+.detailed-results tr:last-child td { border-bottom: none; }
+.detailed-results tr:hover td { background: #f7fafc; }
+
+/* ── Raw JSON toggle ── */
+.raw-json-toggle {
+  margin-top: 1.5rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.raw-json-toggle summary {
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: #718096;
+  font-weight: 600;
+  user-select: none;
+}
+
+.raw-json-toggle summary:hover { color: #2d6a4f; }
+
+pre {
+  background: #1a202c;
+  color: #68d391;
+  padding: 1rem;
+  border-radius: 8px;
+  overflow-x: auto;
+  font-size: 0.8rem;
+  margin-top: 0.75rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ── Responsive ── */
+@media (max-width: 500px) {
+  header h1 { font-size: 1.6rem; }
+  .summary-cards { grid-template-columns: repeat(2, 1fr); }
+}

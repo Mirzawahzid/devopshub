@@ -1,0 +1,11 @@
+# ── Namespace ────────────────────────────────────────────────────────────────
+# Isolates all DevOpsHub resources from other workloads on the cluster.
+# All subsequent manifests reference namespace: devopshub.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devopshub
+  labels:
+    app.kubernetes.io/name: devopshub
+    app.kubernetes.io/managed-by: kubectl
+    environment: production

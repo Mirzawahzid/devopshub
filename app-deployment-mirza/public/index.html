@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Nutritional Facts</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🥗 AI Nutritional Facts</h1>
+      <p class="subtitle">Describe your meal and get instant nutritional analysis</p>
+    </header>
+
+    <section class="input-section">
+      <label for="mealInput">Describe your meal</label>
+      <textarea
+        id="mealInput"
+        placeholder="e.g. A 6oz filet of salmon, seasoned with salt and pepper with half an avocado, a quarter cup of arugula..."
+        rows="5"
+      ></textarea>
+      <button id="analyzeBtn" onclick="analyzeMeal()">
+        <span id="btnText">Analyze Nutritional Facts</span>
+        <span id="btnSpinner" class="spinner hidden"></span>
+      </button>
+    </section>
+
+    <div id="errorBox" class="error-box hidden"></div>
+
+    <section id="resultsSection" class="results-section hidden">
+      <h2>Nutritional Breakdown</h2>
+      <div id="summaryCards" class="summary-cards"></div>
+      <div id="detailedResults" class="detailed-results"></div>
+      <details class="raw-json-toggle">
+        <summary>View Raw JSON Response</summary>
+        <pre id="rawJson"></pre>
+      </details>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

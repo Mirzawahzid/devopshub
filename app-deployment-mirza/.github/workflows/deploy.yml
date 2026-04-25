@@ -1,0 +1,90 @@
+name: Build & Deploy to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout source ──────────────────────────────────────────────────
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # ── 2. Set up Node.js (validates package.json / runs any lint/test) ─────
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install --omit=dev
+
+      # ── 3. Prepare SSH key ─────────────────────────────────────────────────
+      - name: Setup SSH key
+        env:
+          SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H "${{ secrets.EC2_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+          echo "Key length: $(wc -c < ~/.ssh/deploy_key) bytes"
+          ssh-keygen -l -f ~/.ssh/deploy_key
+
+      # ── 4. SSH deploy ───────────────────────────────────────────────────────
+      - name: Deploy to EC2 via SSH
+        env:
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+        run: |
+          ssh -i ~/.ssh/deploy_key \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=30 \
+              ec2-user@${{ secrets.EC2_HOST }} << ENDSSH
+          set -e
+
+          # ── Install system dependencies if missing ──
+          command -v git  &>/dev/null || sudo dnf install -y git
+          command -v node &>/dev/null || sudo dnf install -y nodejs npm
+          command -v npm  &>/dev/null || sudo dnf install -y npm
+
+          APP_DIR="\$HOME/app-deployment-mirza"
+
+          # ── Clone repo on first deploy, pull on subsequent deploys ──
+          export GIT_TERMINAL_PROMPT=0
+          if [ ! -d "\$APP_DIR/.git" ]; then
+            git clone https://github.com/${{ github.repository }}.git "\$APP_DIR"
+          else
+            cd "\$APP_DIR"
+            git fetch origin main
+            git reset --hard origin/main
+          fi
+
+          cd "\$APP_DIR"
+
+          # ── Install production dependencies ──
+          npm install --omit=dev
+
+          # ── Write .env ──
+          cat > .env <<EOF
+          RAPIDAPI_KEY=${RAPIDAPI_KEY}
+          PORT=3000
+          EOF
+
+          # ── Ensure PM2 is available ──
+          if ! command -v pm2 &> /dev/null; then
+            npm install -g pm2
+          fi
+
+          # ── Start or restart the app with PM2 ──
+          pm2 describe nutritional-app > /dev/null 2>&1 \
+            && pm2 restart nutritional-app \
+            || pm2 start server.js --name nutritional-app
+
+          # ── Persist PM2 across reboots ──
+          pm2 save
+          ENDSSH
